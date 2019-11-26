@@ -12,7 +12,7 @@ import (
    NOTE: command_arg_1 and command_arg_2 represent optional parameteras that you define
    in the Slack API UI
 */
-const helpMessage = "type in '@BOT_NAME <command_arg_1> <command_arg_2>'"
+const helpMessage = "To use any commands, start by typing `@PollBot`"
 
 /*
    CreateSlackClient sets up the slack RTM (real-timemessaging) client library,

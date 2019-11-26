@@ -1,0 +1,6 @@
+{
+  "watch": ["*"],
+  "ext": "go start server",
+  "ignore": ["*gen*.go"],
+  "exec": "(killall -9 server || true ) && go run main.go"
+}
