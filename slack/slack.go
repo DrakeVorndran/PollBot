@@ -1,10 +1,10 @@
 package slack
 
 import (
+	"encoding/json"
 	"fmt"
-	"strings"
-
 	"github.com/nlopes/slack"
+	"strings"
 )
 
 /*
@@ -12,7 +12,66 @@ import (
    NOTE: command_arg_1 and command_arg_2 represent optional parameteras that you define
    in the Slack API UI
 */
-const helpMessage = "To use any commands, start by typing `@PollBot`"
+
+type Message struct {
+	Blocks []struct {
+		Type string `json:"type"`
+		Text struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		} `json:"text"`
+		Accessory struct {
+			Type string `json:"type"`
+			Text struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+			} `json:"text"`
+			Value string `json:"value"`
+		} `json:"accessory"`
+	} `json:"blocks"`
+}
+
+// {
+// 	"blocks": [
+// 		{
+// 			"type": "section",
+// 			"text": {
+// 				"type": "mrkdwn",
+// 				"text": "You can add a button alongside text in your message. "
+// 			},
+// 			"accessory": {
+// 				"type": "button",
+// 				"text": {
+// 					"type": "plain_text",
+// 					"text": "Button"
+// 				},
+// 				"value": "click_me_123"
+// 			}
+// 		}
+// 	]
+// }
+
+const helpStr = `{
+	"blocks": [
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "You can add a button alongside text in your message. "
+			},
+			"accessory": {
+				"type": "button",
+				"text": {
+					"type": "plain_text",
+					"text": "Button"
+				},
+				"value": "click_me_123"
+			}
+		}
+	]
+}`
+
+const commandMessage = ""
 
 /*
    CreateSlackClient sets up the slack RTM (real-timemessaging) client library,
@@ -63,9 +122,12 @@ func RespondToEvents(slackClient *slack.RTM) {
 
 // sendHelp is a working help message, for reference.
 func sendHelp(slackClient *slack.RTM, message, slackChannel string) {
+
 	if strings.ToLower(message) != "help" {
 		return
 	}
+	var helpMessage Message
+	var _ = json.Unmarshal([]byte(helpStr), &helpMessage)
 	slackClient.SendMessage(slackClient.NewOutgoingMessage(helpMessage, slackChannel))
 }
 
