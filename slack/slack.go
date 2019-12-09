@@ -1,10 +1,11 @@
 package slack
 
-import (
-	"encoding/json"
+import ( //packages
+
 	"fmt"
-	"github.com/nlopes/slack"
 	"strings"
+
+	"github.com/nlopes/slack"
 )
 
 /*
@@ -13,23 +14,23 @@ import (
    in the Slack API UI
 */
 
-type Message struct {
-	Blocks []struct {
-		Type string `json:"type"`
-		Text struct {
-			Type string `json:"type"`
-			Text string `json:"text"`
-		} `json:"text"`
-		Accessory struct {
-			Type string `json:"type"`
-			Text struct {
-				Type string `json:"type"`
-				Text string `json:"text"`
-			} `json:"text"`
-			Value string `json:"value"`
-		} `json:"accessory"`
-	} `json:"blocks"`
-}
+// type Message struct { //Type
+// 	Blocks []struct {
+// 		Type string `json:"type"`
+// 		Text struct {
+// 			Type string `json:"type"`
+// 			Text string `json:"text"`
+// 		} `json:"text"`
+// 		Accessory struct {
+// 			Type string `json:"type"`
+// 			Text struct {
+// 				Type string `json:"type"`
+// 				Text string `json:"text"`
+// 			} `json:"text"`
+// 			Value string `json:"value"`
+// 		} `json:"accessory"`
+// 	} `json:"blocks"`
+// }
 
 // {
 // 	"blocks": [
@@ -51,34 +52,65 @@ type Message struct {
 // 	]
 // }
 
-const helpStr = `{
-	"blocks": [
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "You can add a button alongside text in your message. "
-			},
-			"accessory": {
-				"type": "button",
-				"text": {
-					"type": "plain_text",
-					"text": "Button"
-				},
-				"value": "click_me_123"
-			}
-		}
-	]
-}`
+// const helpStr = `{
+// 	"blocks": [
+// 		{
+// 			"type": "section",
+// 			"text": {
+// 				"type": "mrkdwn",
+// 				"text": "You can add a button alongside text in your message. "
+// 			},
+// 			"accessory": {
+// 				"type": "button",
+// 				"text": {
+// 					"type": "plain_text",
+// 					"text": "Button"
+// 				},
+// 				"value": "click_me_123"
+// 			}
+// 		}
+// 	]
+// }`
+
+const helpStr = "To find all commands, use command @PollBot commands" //constant
 
 const commandMessage = ""
+
+const PublicConst = "This is a public const" //public const
+var PublicVar = "This is a public const"     //public var
+
+// Map of every command, with a description of what they do
+type CommandArg interface {
+	run()
+}
+
+type Command struct {
+	Input       string
+	Description string
+}
+
+func newCommand(In, Desc string) Command {
+	return Command{Description: Desc, Input: In}
+}
+
+var CreateCommand = Command{Description: "Creates a new poll | `create <pollName> [...poll values]`", Input: "create"}
+var ReadCommand = Command{Description: "Gives the current standing of the poll | `read <pollName>`", Input: "read"}
+var EndCommand = Command{Description: "Stops a given poll from being voted on | `end <pollName>`", Input: "end"}
+var CommandsCommand = Command{Description: "Gives a list of commands, or the details of a speific commands | `commands [command]` ", Input: "commands"}
+
+var Commands = map[string]Command{
+	"create":   CreateCommand,
+	"read":     ReadCommand,
+	"end":      EndCommand,
+	"commands": CommandsCommand,
+}
 
 /*
    CreateSlackClient sets up the slack RTM (real-timemessaging) client library,
    initiating the socket connection and returning the client.
    DO NOT EDIT THIS FUNCTION. This is a fully complete implementation.
 */
-func CreateSlackClient(apiKey string) *slack.RTM {
+func CreateSlackClient(apiKey string) *slack.RTM { // Functions
 	api := slack.New(apiKey)
 	rtm := api.NewRTM()
 	go rtm.ManageConnection() // goroutine!
@@ -110,8 +142,14 @@ func RespondToEvents(slackClient *slack.RTM) {
 
 			// START SLACKBOT CUSTOM CODE
 			// ===============================================================
-			sendResponse(slackClient, message, ev.Channel)
-			sendHelp(slackClient, message, ev.Channel)
+			switch strings.Split(message, " ")[0] {
+			case "help":
+				sendHelp(slackClient, message, ev.Channel)
+			case "commands":
+				sendCommands(slackClient, message, ev.Channel)
+			default:
+				slackClient.SendMessage(slackClient.NewOutgoingMessage("I don't know what you want, try @PollBot commands", ev.Channel))
+			}
 			// ===============================================================
 			// END SLACKBOT CUSTOM CODE
 		default:
@@ -126,23 +164,34 @@ func sendHelp(slackClient *slack.RTM, message, slackChannel string) {
 	if strings.ToLower(message) != "help" {
 		return
 	}
-	var helpMessage Message
-	var _ = json.Unmarshal([]byte(helpStr), &helpMessage)
-	slackClient.SendMessage(slackClient.NewOutgoingMessage(helpMessage, slackChannel))
+	// var helpMessage Message
+	// var _ = json.Unmarshal([]byte(helpStr), &helpMessage)
+	slackClient.SendMessage(slackClient.NewOutgoingMessage(helpStr, slackChannel))
 }
 
 // sendResponse is NOT unimplemented --- write code in the function body to complete!
 
-func sendResponse(slackClient *slack.RTM, message, slackChannel string) {
-	command := strings.ToLower(message)
-	println("[RECEIVED] sendResponse:", command)
+// func sendResponse(slackClient *slack.RTM, message, slackChannel string) {
+// 	command := strings.ToLower(message)
 
-	// START SLACKBOT CUSTOM CODE
-	// ===============================================================
-	// TODO:
-	//      1. Implement sendResponse for one or more of your custom Slackbot commands.
-	//         You could call an external API here, or create your own string response. Anything goes!
-	//      2. STRETCH: Write a goroutine that calls an external API based on the data received in this function.
-	// ===============================================================
-	// END SLACKBOT CUSTOM CODE
+// }
+func sendCommands(slackClient *slack.RTM, message, slackChannel string) {
+	message = strings.ToLower(message)
+	commands := strings.Split(message, " ")
+	if len(commands) == 1 {
+		commandsStr := "The commands you can use are "
+		for key, _ := range Commands {
+			commandsStr += key
+			commandsStr += ", "
+		}
+		slackClient.SendMessage(slackClient.NewOutgoingMessage(commandsStr, slackChannel))
+	} else if len(commands) == 2 {
+		if val, ok := Commands[commands[1]]; ok {
+			slackClient.SendMessage(slackClient.NewOutgoingMessage(val.Description, slackChannel))
+		} else {
+			slackClient.SendMessage(slackClient.NewOutgoingMessage("I don't have that command!", slackChannel))
+		}
+	} else {
+		slackClient.SendMessage(slackClient.NewOutgoingMessage("Too many arguments, I don't know what you want!", slackChannel))
+	}
 }
