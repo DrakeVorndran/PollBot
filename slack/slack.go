@@ -2,7 +2,9 @@ package slack
 
 import ( //packages
 
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/nlopes/slack"
@@ -166,7 +168,28 @@ func sendHelp(slackClient *slack.RTM, message, slackChannel string) {
 	}
 	// var helpMessage Message
 	// var _ = json.Unmarshal([]byte(helpStr), &helpMessage)
-	slackClient.SendMessage(slackClient.NewOutgoingMessage(helpStr, slackChannel))
+	attachment := slack.Attachment{
+		Pretext:  "To view a list of commands, use the command `@pollbot commands` or press the commands button",
+		Fallback: "We don't currently support your client",
+		Color:    "#3AA3E3",
+		Actions: []slack.AttachmentAction{
+			slack.AttachmentAction{
+				Name:  "commands",
+				Text:  "Commands",
+				Type:  "button",
+				Value: "commands",
+			},
+		},
+	}
+
+	NewMessage := slack.MsgOptionAttachments(attachment)
+
+	channelID, timestamp, err := slackClient.PostMessage(slackChannel, slack.MsgOptionText("", false), NewMessage)
+	if err != nil {
+		fmt.Printf("Could not send message: %v", err)
+	}
+	fmt.Printf("Message with buttons sucessfully sent to channel %s at %s", channelID, timestamp)
+	// slackClient.SendMessage(slackClient.NewOutgoingMessage(helpStr, slackChannel))
 }
 
 // sendResponse is NOT unimplemented --- write code in the function body to complete!
@@ -194,4 +217,13 @@ func sendCommands(slackClient *slack.RTM, message, slackChannel string) {
 	} else {
 		slackClient.SendMessage(slackClient.NewOutgoingMessage("Too many arguments, I don't know what you want!", slackChannel))
 	}
+}
+
+func ActionHandler(w http.ResponseWriter, r *http.Request) {
+	var payload slack.InteractionCallback
+	err := json.Unmarshal([]byte(r.FormValue("payload")), &payload)
+	if err != nil {
+		fmt.Printf("Could not parse action response JSON: %v", err)
+	}
+	fmt.Printf("Message button pressed by user %s with value %s", payload.User.Name, payload.Value)
 }

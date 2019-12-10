@@ -2,8 +2,9 @@
 package main
 
 import (
-	"os"
+	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/droxey/goslackit/slack"
 	_ "github.com/joho/godotenv/autoload"
@@ -12,7 +13,9 @@ import (
 // main is our entrypoint, where the application initializes the Slackbot.
 func main() {
 	port := ":" + os.Getenv("PORT")
+	fmt.Println(port)
 	go http.ListenAndServe(port, nil)
+	go http.HandleFunc("/slack/actions", slack.ActionHandler)
 	slackIt()
 }
 
