@@ -2,12 +2,17 @@ package slack
 
 import ( //packages
 
+	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"strings"
-
 	"github.com/nlopes/slack"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+	"time"
 )
 
 /*
@@ -15,76 +20,6 @@ import ( //packages
    NOTE: command_arg_1 and command_arg_2 represent optional parameteras that you define
    in the Slack API UI
 */
-
-// type Message struct { //Type
-// 	Blocks []struct {
-// 		Type string `json:"type"`
-// 		Text struct {
-// 			Type string `json:"type"`
-// 			Text string `json:"text"`
-// 		} `json:"text"`
-// 		Accessory struct {
-// 			Type string `json:"type"`
-// 			Text struct {
-// 				Type string `json:"type"`
-// 				Text string `json:"text"`
-// 			} `json:"text"`
-// 			Value string `json:"value"`
-// 		} `json:"accessory"`
-// 	} `json:"blocks"`
-// }
-
-// {
-// 	"blocks": [
-// 		{
-// 			"type": "section",
-// 			"text": {
-// 				"type": "mrkdwn",
-// 				"text": "You can add a button alongside text in your message. "
-// 			},
-// 			"accessory": {
-// 				"type": "button",
-// 				"text": {
-// 					"type": "plain_text",
-// 					"text": "Button"
-// 				},
-// 				"value": "click_me_123"
-// 			}
-// 		}
-// 	]
-// }
-
-// const helpStr = `{
-// 	"blocks": [
-// 		{
-// 			"type": "section",
-// 			"text": {
-// 				"type": "mrkdwn",
-// 				"text": "You can add a button alongside text in your message. "
-// 			},
-// 			"accessory": {
-// 				"type": "button",
-// 				"text": {
-// 					"type": "plain_text",
-// 					"text": "Button"
-// 				},
-// 				"value": "click_me_123"
-// 			}
-// 		}
-// 	]
-// }`
-
-const helpStr = "To find all commands, use command @PollBot commands" //constant
-
-const commandMessage = ""
-
-const PublicConst = "This is a public const" //public const
-var PublicVar = "This is a public const"     //public var
-
-// Map of every command, with a description of what they do
-type CommandArg interface {
-	run()
-}
 
 type Command struct {
 	Input       string
@@ -126,6 +61,25 @@ func CreateSlackClient(apiKey string) *slack.RTM { // Functions
    EDIT THIS FUNCTION IN THE SPACE INDICATED ONLY!
 */
 func RespondToEvents(slackClient *slack.RTM) {
+	MongoUri := os.Getenv("MONGO_URI")
+	fmt.Println(MongoUri)
+	client, err := mongo.NewClient(options.Client().ApplyURI(MongoUri))
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	err = client.Connect(ctx)
+	defer client.Disconnect(ctx)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	Database := client.Database("go")
+
+	fmt.Println("Connected to MongoDB!")
+
 	for msg := range slackClient.IncomingEvents {
 		fmt.Println("Event Received: ", msg.Type)
 		switch ev := msg.Data.(type) {
@@ -149,6 +103,8 @@ func RespondToEvents(slackClient *slack.RTM) {
 				sendHelp(slackClient, message, ev.Channel)
 			case "commands":
 				sendCommands(slackClient, message, ev.Channel)
+			case "create":
+				sendCreate(slackClient, message, ev.Channel, Database)
 			default:
 				slackClient.SendMessage(slackClient.NewOutgoingMessage("I don't know what you want, try @PollBot commands", ev.Channel))
 			}
@@ -160,6 +116,39 @@ func RespondToEvents(slackClient *slack.RTM) {
 	}
 }
 
+type Poll struct {
+	MessageId string
+	Name      string
+	Items     map[string]string
+}
+
+func NewPoll(Name string) Poll {
+	return Poll{
+		Name:      Name,
+		MessageId: "",
+		Items:     map[string]string{},
+	}
+}
+
+func sendCreate(slackClient *slack.RTM, message, slackChannel string, Database *mongo.Database) {
+	message = strings.ToLower(message)
+	commands := strings.Split(message, " ")
+
+	if len(commands) < 3 {
+		slackClient.SendMessage(slackClient.NewOutgoingMessage("You need at least 3 arguments to create a poll!", slackChannel))
+		return
+	}
+	UserPoll := NewPoll(commands[1])
+	collection := Database.Collection("polls")
+	insertResult, err := collection.InsertOne(context.TODO(), UserPoll)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Inserted a Single Document: ", insertResult.InsertedID)
+	slackClient.SendMessage(slackClient.NewOutgoingMessage("", slackChannel))
+
+}
+
 // sendHelp is a working help message, for reference.
 func sendHelp(slackClient *slack.RTM, message, slackChannel string) {
 
@@ -169,17 +158,9 @@ func sendHelp(slackClient *slack.RTM, message, slackChannel string) {
 	// var helpMessage Message
 	// var _ = json.Unmarshal([]byte(helpStr), &helpMessage)
 	attachment := slack.Attachment{
-		Pretext:  "To view a list of commands, use the command `@pollbot commands` or press the commands button",
+		Pretext:  "To view a list of commands, use the command `@pollbot commands`",
 		Fallback: "We don't currently support your client",
 		Color:    "#3AA3E3",
-		Actions: []slack.AttachmentAction{
-			slack.AttachmentAction{
-				Name:  "commands",
-				Text:  "Commands",
-				Type:  "button",
-				Value: "commands",
-			},
-		},
 	}
 
 	NewMessage := slack.MsgOptionAttachments(attachment)
@@ -192,13 +173,8 @@ func sendHelp(slackClient *slack.RTM, message, slackChannel string) {
 	// slackClient.SendMessage(slackClient.NewOutgoingMessage(helpStr, slackChannel))
 }
 
-// sendResponse is NOT unimplemented --- write code in the function body to complete!
-
-// func sendResponse(slackClient *slack.RTM, message, slackChannel string) {
-// 	command := strings.ToLower(message)
-
-// }
 func sendCommands(slackClient *slack.RTM, message, slackChannel string) {
+
 	message = strings.ToLower(message)
 	commands := strings.Split(message, " ")
 	if len(commands) == 1 {
@@ -207,6 +183,7 @@ func sendCommands(slackClient *slack.RTM, message, slackChannel string) {
 			commandsStr += key
 			commandsStr += ", "
 		}
+
 		slackClient.SendMessage(slackClient.NewOutgoingMessage(commandsStr, slackChannel))
 	} else if len(commands) == 2 {
 		if val, ok := Commands[commands[1]]; ok {
