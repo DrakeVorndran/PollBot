@@ -4,6 +4,7 @@ module github.com/droxey/goslackit
 
 require (
 	github.com/DataDog/zstd v1.4.4 // indirect
+	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/gorilla/websocket v1.4.0 // indirect

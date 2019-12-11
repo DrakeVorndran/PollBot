@@ -3,6 +3,8 @@ github.com/DataDog/zstd v1.4.4/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t
 github.com/droxey/goslackit v0.0.0-20190212120057-6edef0b5bd74 h1:aIG4tc2sgpnoANyXj4zAXsPSCq0itHInQ6g53I68R4E=
 github.com/droxey/goslackit v0.0.0-20190212191025-3f9dc7e7815b h1:ylyOqlRBAAaPhNYDn3RMS+49w3c0K0m5miLx7ojk/PU=
 github.com/droxey/goslackit v0.0.0-20190212191025-3f9dc7e7815b/go.mod h1:21L5OJTzF16okxTqjmzYXh1H6SaPexqW/vx5oCk0720=
+github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8 h1:DujepqpGd1hyOd7aW59XpK7Qymp8iy83xq74fLr21is=
+github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8/go.mod h1:xkRDCp4j0OGD1HRkm4kmhM+pmpv3AKq5SU7GMg4oO/Q=
 github.com/go-stack/stack v1.8.0 h1:5SgMzNM5HxrEjV0ww2lTmX6E2Izsfxas4+YHWRs3Lsk=
 github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
 github.com/golang/snappy v0.0.1 h1:Qgr9rKW7uDUkrbSmQeiDsGa8SjGyCOGtuasMWwvp2P4=

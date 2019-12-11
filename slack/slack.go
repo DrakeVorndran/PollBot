@@ -2,17 +2,15 @@ package slack
 
 import ( //packages
 
-	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/nlopes/slack"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-	"time"
+
+	"github.com/globalsign/mgo"
+	"github.com/nlopes/slack"
 )
 
 /*
@@ -62,21 +60,16 @@ func CreateSlackClient(apiKey string) *slack.RTM { // Functions
 */
 func RespondToEvents(slackClient *slack.RTM) {
 	MongoUri := os.Getenv("MONGO_URI")
-	fmt.Println(MongoUri)
-	client, err := mongo.NewClient(options.Client().ApplyURI(MongoUri))
+	session, err := mgo.Dial(MongoUri)
+	client := session.DB("pollbot")
 
 	if err != nil {
 		log.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	err = client.Connect(ctx)
-	defer client.Disconnect(ctx)
 
 	if err != nil {
 		log.Fatal(err)
 	}
-	Database := client.Database("go")
 
 	fmt.Println("Connected to MongoDB!")
 
@@ -104,7 +97,7 @@ func RespondToEvents(slackClient *slack.RTM) {
 			case "commands":
 				sendCommands(slackClient, message, ev.Channel)
 			case "create":
-				sendCreate(slackClient, message, ev.Channel, Database)
+				sendCreate(slackClient, message, ev.Channel, client)
 			default:
 				slackClient.SendMessage(slackClient.NewOutgoingMessage("I don't know what you want, try @PollBot commands", ev.Channel))
 			}
@@ -122,29 +115,40 @@ type Poll struct {
 	Items     map[string]string
 }
 
-func NewPoll(Name string) Poll {
+func NewPoll(Name string, pollOptions map[string]string) Poll {
 	return Poll{
 		Name:      Name,
 		MessageId: "",
-		Items:     map[string]string{},
+		Items:     pollOptions,
 	}
 }
 
-func sendCreate(slackClient *slack.RTM, message, slackChannel string, Database *mongo.Database) {
+func sendCreate(slackClient *slack.RTM, message, slackChannel string, client *mgo.Database) {
 	message = strings.ToLower(message)
 	commands := strings.Split(message, " ")
+
+	// headerText := slack.NewTextBlockObject("mrkdwn", "You have a new request:\n*<fakeLink.toEmployeeProfile.com|Fred Enriquez - New device request>*", false, false)
+	// headerSection := slack.NewSectionBlock(headerText, nil, nil)
+	// fmt.Println(headerSection)
+	emojiString := "😀😁😂🤣😃😄😅😆😉😊😋😎😍😘🥰😗😙😚☺️🙂🤗🤩🤔🤨😐😑😶🙄😏😣😥😮🤐😯😪😫😴😌😛😜😝🤤😒😓😔😕🙃🤑😲☹️🙁😖😞😟😤😢😭😦😧😨😩🤯😬😰😱🥵🥶😳🤪😵😡😠🤬😷🤒🤕🤢🤮🤧😇🤠🤡🥳🥴🥺🤥🤫🤭🧐🤓😈👿👹👺💀👻👽🤖💩😺😸😹😻😼😽🙀😿😾"
+	// alf := "abcdefghijklmnopqrstuvwxyz"
+	pollOptions := make(map[string]string)
 
 	if len(commands) < 3 {
 		slackClient.SendMessage(slackClient.NewOutgoingMessage("You need at least 3 arguments to create a poll!", slackChannel))
 		return
 	}
-	UserPoll := NewPoll(commands[1])
-	collection := Database.Collection("polls")
-	insertResult, err := collection.InsertOne(context.TODO(), UserPoll)
-	if err != nil {
-		log.Fatal(err)
+	for i := range commands[2:] {
+		fmt.Println(i)
+		pollOptions[commands[i+2]] = string(emojiString[i])
 	}
-	fmt.Println("Inserted a Single Document: ", insertResult.InsertedID)
+	fmt.Println(pollOptions)
+	UserPoll := NewPoll(commands[1], pollOptions)
+	collection := client.C("polls")
+	UserJson, _ := json.Marshal(UserPoll)
+	fmt.Println(string(UserJson))
+	collection.Insert(UserJson)
+
 	slackClient.SendMessage(slackClient.NewOutgoingMessage("", slackChannel))
 
 }
