@@ -19,6 +19,7 @@ require (
 	github.com/xdg/stringprep v1.0.0 // indirect
 	go.mongodb.org/mongo-driver v1.2.0
 	golang.org/x/tools v0.0.0-20191204214957-d79e56da46fe // indirect
+	labix.org/v2/mgo v0.0.0-20140701140051-000000000287
 )
 
 go 1.13
