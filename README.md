@@ -7,7 +7,7 @@ Pollbot is a bot for slack designed to create simple polls based on the reaction
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/droxey/goslackit)](https://goreportcard.com/report/github.com/droxey/goslackit) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/7ed40f9f3ecf46709879d5fbac28fd9b)](https://www.codacy.com/app/droxey/goslackit?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=droxey/goslackit&amp;utm_campaign=Badge_Grade)
 
-# [Demo](youtube.com/video/wqmx_vNcjMk)
+# [Demo](https://youtube.com/video/wqmx_vNcjMk)
 short youtube video showing the features of pollbot
 
 # Usage
